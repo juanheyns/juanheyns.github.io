@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<meta charset="utf-8">
+<style>
+
+.node {
+  stroke: #fff;
+  stroke-width: 1.5px;
+}
+
+.link {
+  stroke: #999;
+  stroke-opacity: .6;
+}
+
+</style>
+<body>
+<script src="./Generator.js"></script>
+<script src="http://d3js.org/d3.v3.js"></script>
+<script>
+
+var Generator = new Generator();
+var transform = function(graph) {
+    var nodes = [];
+    var links = [];
+    for (var n = 0; n < graph.nodes.length; n++) {
+        nodes.push({id: graph.nodes[n].id, name: graph.nodes[n].meta.row + ',' + graph.nodes[n].meta.col, state: graph.nodes[n].state});
+    }
+    for (var l = 0; l < graph.edges.length; l++) {
+        links.push({source: graph.edges[l].leftId, target: graph.edges[l].rightId, value: 1});
+    }
+    return {nodes: nodes, links: links};
+};
+var flatten = function(graph) {
+    var lookup = {};
+    for (var l = 0; l < graph.edges.length; l++) {
+        // From left
+        var neighbours = lookup[graph.edges[l].leftId];
+        if (neighbours === undefined) {
+            neighbours = [];
+        }
+        neighbours.push(graph.edges[l].rightId);
+        lookup[graph.edges[l].leftId] = neighbours;
+        
+        // From right
+        var neighbours = lookup[graph.edges[l].rightId];
+        if (neighbours === undefined) {
+            neighbours = [];
+        }
+        neighbours.push(graph.edges[l].leftId);
+        lookup[graph.edges[l].rightId] = neighbours;
+    }
+    return lookup;
+};
+
+var width = 1024,
+    height = 768;
+
+var color = d3.scale.category20();
+
+var force = d3.layout.force()
+    .charge(-20)
+    .linkDistance(20)
+    .size([width, height]);
+
+var svg = d3.select("body").append("svg")
+    .attr("width", width)
+    .attr("height", height);
+
+  var hex = Generator.hex(15, 15, 'grass');
+  var graph = transform(hex);
+  var neighbours = flatten(hex);
+  console.log(graph, neighbours);
+
+  force
+      .nodes(graph.nodes)
+      .links(graph.links)
+      .start();
+
+  var link = svg.selectAll(".link")
+      .data(graph.links)
+      .enter()
+      .append("line")
+      .attr("class", "link")
+      .style("stroke-width", function(d) { return Math.sqrt(d.value); });
+
+  var node = svg.selectAll(".node")
+      .data(graph.nodes)
+      .enter()
+      .append("circle")
+      .attr("class", "node")
+      .attr("id", function(d) {
+          return 'node_' + d.id;
+      })
+      .attr("r", 5)
+      .call(force.drag);
+  
+  var updateStyles = function() {
+      node.style("fill", function(d) { 
+          if (d.state === 'grass') 
+              return 'green';
+          if (d.state === 'water') 
+              return 'blue';
+          if (d.state === 'earth') 
+              return 'brown';
+      });
+  };
+  updateStyles();
+
+  node.append("title")
+      .text(function(d) { return d.name; });
+
+  force.on("tick", function() {
+    link.attr("x1", function(d) { return d.source.x; })
+        .attr("y1", function(d) { return d.source.y; })
+        .attr("x2", function(d) { return d.target.x; })
+        .attr("y2", function(d) { return d.target.y; });
+
+    node.attr("cx", function(d) { return d.x; })
+        .attr("cy", function(d) { return d.y; });
+  });
+  
+  graph.nodes[30].state = 'water';
+  
+  var expand = function(node, neighbours) {
+      if (node.state === 'water') {
+          return node.state;
+      }
+      for (var i = 0; i < neighbours.length; i++) {
+          if (neighbours[i].state === 'water') {
+              return 'water';
+          }
+      }
+      return node.state;
+  }
+  
+  updateStyles();
+  var tick = function() {
+    var states = [];
+    for (var n = 0; n < graph.nodes.length; n++) {
+      var node = graph.nodes[n];
+      var around = [];
+      for (var a = 0; a < neighbours[n].length; a++) {
+      	   around.push(graph.nodes[neighbours[n][a]]);
+      }
+      states.push(expand(node, around));
+    }
+    for (var n = 0; n < graph.nodes.length; n++) {
+      graph.nodes[n].state = states[n];
+    }
+    updateStyles();
+  };
+  
+  setTimeout(function() {
+     setInterval(tick, 1000);
+  }, 5000);
+
+</script>
