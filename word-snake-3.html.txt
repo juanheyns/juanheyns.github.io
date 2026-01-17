@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WordSnake V1 Prototype</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #0f1115;
+      --panel: #1b1f27;
+      --accent: #59d87c;
+      --accent-2: #f9c74f;
+      --danger: #ef476f;
+      --text: #f7f7f9;
+      --muted: #9aa3b2;
+      --tile: #2c3240;
+      --tile-active: #3b4152;
+      font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background: radial-gradient(circle at top, #1b202b 0%, #0b0d12 55%, #06070a 100%);
+      color: var(--text);
+      min-height: 100vh;
+      padding: 24px;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: minmax(260px, 320px) minmax(360px, 1fr) minmax(220px, 280px);
+      gap: 24px;
+      align-items: start;
+    }
+
+    header {
+      grid-column: 1 / -1;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 24px;
+      background: linear-gradient(130deg, #1e2330, #141824);
+      border-radius: 16px;
+      border: 1px solid #2c3345;
+    }
+
+    header h1 {
+      font-size: 24px;
+      margin: 0;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    header .sub {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .panel {
+      background: var(--panel);
+      border-radius: 16px;
+      padding: 16px;
+      border: 1px solid #2c3345;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    }
+
+    .panel h2 {
+      margin-top: 0;
+      font-size: 16px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+
+    .stats {
+      display: grid;
+      gap: 12px;
+    }
+
+    .stat {
+      display: flex;
+      justify-content: space-between;
+      padding: 10px 12px;
+      border-radius: 12px;
+      background: #151a24;
+    }
+
+    .stat strong {
+      color: var(--accent);
+    }
+
+    .arena {
+      display: grid;
+      grid-template-columns: repeat(15, minmax(18px, 1fr));
+      gap: 4px;
+      background: #10131b;
+      border-radius: 16px;
+      padding: 12px;
+      border: 1px solid #2c3345;
+    }
+
+    .tile {
+      position: relative;
+      padding-top: 100%;
+      border-radius: 6px;
+      background: var(--tile);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 600;
+      font-size: 12px;
+      color: var(--text);
+    }
+
+    .tile span {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .tile.head {
+      background: #59d87c;
+      color: #0b0d12;
+    }
+
+    .tile.body {
+      background: #3d7bff;
+    }
+
+    .tile.neutral {
+      background: #7b7f93;
+      color: #0b0d12;
+    }
+
+    .letter-pool {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(40px, 1fr));
+      gap: 8px;
+    }
+
+    .letter {
+      background: var(--tile);
+      padding: 10px 0;
+      border-radius: 10px;
+      text-align: center;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 0.1s ease, background 0.2s ease;
+    }
+
+    .letter:hover {
+      background: var(--tile-active);
+      transform: translateY(-2px);
+    }
+
+    .letter.selected {
+      background: var(--accent-2);
+      color: #1b1200;
+    }
+
+    .current-word {
+      font-size: 24px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      min-height: 32px;
+    }
+
+    .actions {
+      display: grid;
+      gap: 12px;
+    }
+
+    button {
+      border: none;
+      border-radius: 10px;
+      padding: 10px 12px;
+      font-weight: 600;
+      background: #2c3345;
+      color: var(--text);
+      cursor: pointer;
+    }
+
+    button.primary {
+      background: var(--accent);
+      color: #081107;
+    }
+
+    button.danger {
+      background: var(--danger);
+    }
+
+    .legend {
+      display: grid;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+
+    .legend span {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .legend i {
+      width: 14px;
+      height: 14px;
+      border-radius: 4px;
+      display: inline-block;
+    }
+
+    .legend .head { background: #59d87c; }
+    .legend .body { background: #3d7bff; }
+    .legend .neutral { background: #7b7f93; }
+
+    .tip {
+      font-size: 12px;
+      color: var(--muted);
+      margin-top: 12px;
+    }
+
+    @media (max-width: 1100px) {
+      .app {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <div>
+        <h1>WordSnake</h1>
+        <div class="sub">Head-to-head word combat • V1 prototype</div>
+      </div>
+      <div class="sub">Arena 15×15 • Shared letter pool • Cooldown ready</div>
+    </header>
+
+    <section class="panel">
+      <h2>Players</h2>
+      <div class="stats">
+        <div class="stat"><span>You</span><strong>Alive • 18 tiles</strong></div>
+        <div class="stat"><span>Bot Alpha</span><strong>Alive • 14 tiles</strong></div>
+        <div class="stat"><span>Bot Beta</span><strong>Alive • 10 tiles</strong></div>
+        <div class="stat"><span>Bot Gamma</span><strong>Down • 0 tiles</strong></div>
+      </div>
+      <h2>Neutral Tiles</h2>
+      <div class="legend">
+        <span><i class="neutral"></i> Blocking (fading)</span>
+        <span><i class="body"></i> Snake body</span>
+        <span><i class="head"></i> Snake head</span>
+      </div>
+      <p class="tip">Tap letters, then swipe the head direction to launch a move. Invalid words will not move.</p>
+    </section>
+
+    <section class="panel">
+      <h2>Arena</h2>
+      <div class="arena" id="arena"></div>
+    </section>
+
+    <section class="panel">
+      <h2>Letter Pool</h2>
+      <div class="letter-pool" id="letterPool"></div>
+      <h2>Current Word</h2>
+      <div class="current-word" id="currentWord"></div>
+      <div class="actions">
+        <button class="primary" id="confirmWord">Confirm Word</button>
+        <button id="clearWord">Clear</button>
+        <button class="danger" id="cancelMove">Cancel Move</button>
+      </div>
+      <p class="tip">Rare letters grant a speed boost for one move only.</p>
+    </section>
+  </div>
+
+  <script>
+    const arena = document.getElementById("arena");
+    const letterPool = document.getElementById("letterPool");
+    const currentWord = document.getElementById("currentWord");
+    const confirmWord = document.getElementById("confirmWord");
+    const clearWord = document.getElementById("clearWord");
+    const cancelMove = document.getElementById("cancelMove");
+
+    const poolLetters = ["A", "R", "S", "T", "E", "L", "N", "O", "Q", "Z", "M", "D", "U", "I", "P", "G"];
+    const selectedLetters = [];
+
+    const tileState = new Map([
+      ["7-7", { type: "head", text: "H" }],
+      ["7-6", { type: "body", text: "E" }],
+      ["7-5", { type: "body", text: "L" }],
+      ["7-4", { type: "body", text: "L" }],
+      ["7-3", { type: "body", text: "O" }],
+      ["10-9", { type: "head", text: "B" }],
+      ["10-8", { type: "body", text: "O" }],
+      ["10-7", { type: "body", text: "T" }],
+      ["4-10", { type: "neutral", text: "#" }],
+      ["5-10", { type: "neutral", text: "#" }]
+    ]);
+
+    const renderArena = () => {
+      arena.innerHTML = "";
+      for (let row = 0; row < 15; row += 1) {
+        for (let col = 0; col < 15; col += 1) {
+          const key = `${row}-${col}`;
+          const tile = document.createElement("div");
+          tile.className = "tile";
+          const data = tileState.get(key);
+          if (data) {
+            tile.classList.add(data.type);
+            tile.innerHTML = `<span>${data.text}</span>`;
+          }
+          arena.appendChild(tile);
+        }
+      }
+    };
+
+    const renderPool = () => {
+      letterPool.innerHTML = "";
+      poolLetters.forEach((letter, index) => {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "letter";
+        button.textContent = letter;
+        button.dataset.index = index;
+        if (selectedLetters.includes(index)) {
+          button.classList.add("selected");
+        }
+        button.addEventListener("click", () => {
+          if (selectedLetters.includes(index)) {
+            selectedLetters.splice(selectedLetters.indexOf(index), 1);
+          } else {
+            selectedLetters.push(index);
+          }
+          updateWord();
+          renderPool();
+        });
+        letterPool.appendChild(button);
+      });
+    };
+
+    const updateWord = () => {
+      currentWord.textContent = selectedLetters.map((index) => poolLetters[index]).join("");
+    };
+
+    confirmWord.addEventListener("click", () => {
+      if (!selectedLetters.length) {
+        currentWord.textContent = "";
+        return;
+      }
+      currentWord.textContent = `${currentWord.textContent} ✓ Valid`;
+    });
+
+    clearWord.addEventListener("click", () => {
+      selectedLetters.length = 0;
+      updateWord();
+      renderPool();
+    });
+
+    cancelMove.addEventListener("click", () => {
+      selectedLetters.length = 0;
+      updateWord();
+      renderPool();
+    });
+
+    renderArena();
+    renderPool();
+    updateWord();
+  </script>
+</body>
+</html>

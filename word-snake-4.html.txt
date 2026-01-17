@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>WordSnake V1 Prototype</title>
+  <style>
+    :root {
+      color-scheme: light;
+      font-family: "Helvetica Neue", "SF Pro Text", system-ui, sans-serif;
+      background: #f5f6f8;
+      color: #1f2933;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 16px;
+    }
+
+    .app {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      gap: 16px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    header h1 {
+      margin: 0;
+      font-size: 24px;
+    }
+
+    header p {
+      margin: 0;
+      color: #52616b;
+    }
+
+    .hud {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+    }
+
+    .panel {
+      background: #ffffff;
+      border-radius: 16px;
+      padding: 12px 14px;
+      box-shadow: 0 12px 24px rgba(15, 23, 42, 0.08);
+    }
+
+    .panel h2 {
+      font-size: 14px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: #6b7280;
+      margin: 0 0 8px;
+    }
+
+    .players {
+      display: grid;
+      gap: 8px;
+    }
+
+    .player {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 8px 10px;
+      border-radius: 12px;
+      background: #f3f4f6;
+    }
+
+    .player strong {
+      font-size: 14px;
+    }
+
+    .player span {
+      font-size: 12px;
+      color: #6b7280;
+    }
+
+    .stage {
+      display: grid;
+      gap: 8px;
+    }
+
+    .stage .status {
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .arena {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) 280px;
+      gap: 16px;
+    }
+
+    .grid {
+      background: #ffffff;
+      border-radius: 20px;
+      padding: 16px;
+      display: grid;
+      grid-template-columns: repeat(15, minmax(0, 1fr));
+      grid-template-rows: repeat(15, 1fr);
+      gap: 4px;
+      aspect-ratio: 1 / 1;
+      box-shadow: 0 16px 32px rgba(15, 23, 42, 0.1);
+    }
+
+    .cell {
+      background: #f8fafc;
+      border-radius: 6px;
+      display: grid;
+      place-items: center;
+      font-size: 11px;
+      font-weight: 600;
+      color: #94a3b8;
+      height: 100%;
+    }
+
+    .cell.head {
+      background: #2563eb;
+      color: #ffffff;
+      font-size: 12px;
+    }
+
+    .cell.body {
+      background: #93c5fd;
+      color: #1e293b;
+    }
+
+    .cell.neutral {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .side {
+      display: grid;
+      gap: 16px;
+    }
+
+    .letter-pool {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .tile {
+      width: 40px;
+      height: 48px;
+      border-radius: 10px;
+      background: #fff7ed;
+      border: 1px solid #fed7aa;
+      display: grid;
+      place-items: center;
+      font-weight: 700;
+      font-size: 18px;
+      color: #9a3412;
+      cursor: pointer;
+      transition: transform 0.1s ease, background 0.2s ease;
+    }
+
+    .tile:hover {
+      transform: translateY(-2px);
+    }
+
+    .tile.reserved {
+      background: #dcfce7;
+      border-color: #86efac;
+      color: #166534;
+    }
+
+    .word-builder {
+      display: grid;
+      gap: 8px;
+    }
+
+    .word-current {
+      font-size: 22px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+    }
+
+    .chip-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+
+    .chip {
+      padding: 4px 8px;
+      border-radius: 999px;
+      background: #e0e7ff;
+      color: #3730a3;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .controls {
+      display: grid;
+      gap: 12px;
+    }
+
+    .pad {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 8px;
+    }
+
+    .direction {
+      padding: 10px;
+      border-radius: 12px;
+      border: none;
+      font-weight: 600;
+      background: #e2e8f0;
+      cursor: pointer;
+    }
+
+    .direction.primary {
+      background: #4f46e5;
+      color: #fff;
+    }
+
+    .cooldown {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .bar {
+      flex: 1;
+      height: 8px;
+      border-radius: 999px;
+      background: #e5e7eb;
+      overflow: hidden;
+    }
+
+    .bar span {
+      display: block;
+      height: 100%;
+      width: 40%;
+      background: linear-gradient(90deg, #22c55e, #4ade80);
+    }
+
+    .legend {
+      font-size: 12px;
+      color: #6b7280;
+    }
+
+    @media (max-width: 960px) {
+      .arena {
+        grid-template-columns: 1fr;
+      }
+
+      .grid {
+        order: 2;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>WordSnake V1 — Prototype</h1>
+      <p>Tap letters from the shared pool, build a word, then swipe to move the snake head in a straight line.</p>
+    </header>
+
+    <section class="hud">
+      <div class="panel">
+        <h2>Players</h2>
+        <div class="players">
+          <div class="player">
+            <strong>Player 1</strong>
+            <span>Word length: 5 · Speed boost: Q</span>
+          </div>
+          <div class="player">
+            <strong>Bot A</strong>
+            <span>Word length: 4 · Cooldown</span>
+          </div>
+          <div class="player">
+            <strong>Bot B</strong>
+            <span>Word length: 6 · Aggressive</span>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Match Status</h2>
+        <div class="stage">
+          <div class="status">Round 3 · Minimum word length: 4</div>
+          <div class="legend">Head-to-head collisions decided by current word length.</div>
+        </div>
+      </div>
+      <div class="panel">
+        <h2>Letter Economy</h2>
+        <div class="stage">
+          <div class="status">Bag: 62 letters · Shared pool: 16 letters</div>
+          <div class="legend">Reserved letters return to the pool after 3 seconds if unused.</div>
+        </div>
+      </div>
+    </section>
+
+    <section class="arena">
+      <div class="grid" id="grid"></div>
+      <div class="side">
+        <div class="panel">
+          <h2>Shared Letter Pool</h2>
+          <div class="letter-pool" id="letterPool"></div>
+        </div>
+        <div class="panel word-builder">
+          <h2>Current Word</h2>
+          <div class="word-current" id="currentWord">—</div>
+          <div class="chip-row" id="reservedRow"></div>
+          <div class="legend" id="validation">Tap letters to reserve. Valid words let you move.</div>
+        </div>
+        <div class="panel controls">
+          <h2>Swipe to Move</h2>
+          <div class="pad">
+            <span></span>
+            <button class="direction" data-dir="up">⬆️</button>
+            <span></span>
+            <button class="direction" data-dir="left">⬅️</button>
+            <button class="direction primary" data-dir="forward">GO</button>
+            <button class="direction" data-dir="right">➡️</button>
+            <span></span>
+            <button class="direction" data-dir="down">⬇️</button>
+            <span></span>
+          </div>
+          <div class="cooldown">
+            <span>Cooldown</span>
+            <div class="bar"><span></span></div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script>
+    const pool = ["A", "E", "T", "R", "S", "N", "L", "O", "I", "D", "G", "P", "Q", "Z", "U", "M"];
+    const dictionary = new Set(["SNAKE", "SNAKES", "WORD", "WORDS", "GRID", "MOVE", "TAP", "TAPS", "SCORE", "FAST"]);
+    const reserved = [];
+
+    const letterPoolEl = document.getElementById("letterPool");
+    const currentWordEl = document.getElementById("currentWord");
+    const reservedRowEl = document.getElementById("reservedRow");
+    const validationEl = document.getElementById("validation");
+
+    function renderPool() {
+      letterPoolEl.innerHTML = "";
+      pool.forEach((letter, index) => {
+        const tile = document.createElement("button");
+        tile.className = "tile";
+        tile.textContent = letter;
+        tile.addEventListener("click", () => reserveLetter(letter, index, tile));
+        letterPoolEl.appendChild(tile);
+      });
+    }
+
+    function reserveLetter(letter, index, tile) {
+      const reservation = {
+        letter,
+        id: Date.now() + Math.random(),
+        index,
+      };
+      reserved.push(reservation);
+      tile.classList.add("reserved");
+      tile.disabled = true;
+
+      updateWord();
+      window.setTimeout(() => releaseLetter(reservation), 3000);
+    }
+
+    function releaseLetter(reservation) {
+      const idx = reserved.findIndex((item) => item.id === reservation.id);
+      if (idx === -1) return;
+      reserved.splice(idx, 1);
+      const tile = letterPoolEl.children[reservation.index];
+      if (tile) {
+        tile.classList.remove("reserved");
+        tile.disabled = false;
+      }
+      updateWord();
+    }
+
+    function updateWord() {
+      const word = reserved.map((item) => item.letter).join("");
+      currentWordEl.textContent = word || "—";
+      reservedRowEl.innerHTML = "";
+      reserved.forEach((item) => {
+        const chip = document.createElement("span");
+        chip.className = "chip";
+        chip.textContent = `${item.letter} · 3s`;
+        reservedRowEl.appendChild(chip);
+      });
+      if (!word) {
+        validationEl.textContent = "Tap letters to reserve. Valid words let you move.";
+        return;
+      }
+      validationEl.textContent = dictionary.has(word)
+        ? `✅ Valid word (${word.length} letters). Swipe to move!`
+        : "❌ Invalid word. Keep tapping letters.";
+    }
+
+    function renderGrid() {
+      const grid = document.getElementById("grid");
+      grid.innerHTML = "";
+      for (let row = 0; row < 15; row += 1) {
+        for (let col = 0; col < 15; col += 1) {
+          const cell = document.createElement("div");
+          cell.className = "cell";
+          if (row === 7 && col === 7) {
+            cell.classList.add("head");
+            cell.textContent = "P1";
+          } else if (row === 7 && col < 7 && col > 2) {
+            cell.classList.add("body");
+            cell.textContent = pool[col % pool.length];
+          } else if (row === 4 && col === 10) {
+            cell.classList.add("neutral");
+            cell.textContent = "✖";
+          }
+          grid.appendChild(cell);
+        }
+      }
+    }
+
+    document.querySelectorAll(".direction").forEach((button) => {
+      button.addEventListener("click", () => {
+        const dir = button.dataset.dir;
+        const word = reserved.map((item) => item.letter).join("");
+        if (!dictionary.has(word)) {
+          validationEl.textContent = "❌ Invalid word. You cannot move yet.";
+          return;
+        }
+        validationEl.textContent = `Snake moves ${dir}. Letters placed!`;
+      });
+    });
+
+    renderGrid();
+    renderPool();
+  </script>
+</body>
+</html>

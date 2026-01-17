@@ -1,0 +1,523 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>WordSnake V1 Prototype</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+        background: #0f1117;
+        color: #f4f6fb;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        padding: 24px;
+        display: grid;
+        grid-template-columns: minmax(320px, 1fr) minmax(320px, 420px);
+        gap: 24px;
+        align-items: start;
+      }
+
+      header {
+        grid-column: 1 / -1;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      header h1 {
+        font-size: 1.6rem;
+        margin: 0;
+      }
+
+      .tag {
+        background: #1f2633;
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 0.85rem;
+        color: #a7b6ff;
+      }
+
+      .arena {
+        background: #141824;
+        border-radius: 16px;
+        padding: 16px;
+        border: 1px solid #20283b;
+        box-shadow: 0 20px 30px rgba(0, 0, 0, 0.35);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(15, 1fr);
+        grid-template-rows: repeat(15, 1fr);
+        gap: 2px;
+        background: #0b0e16;
+        border-radius: 12px;
+        padding: 8px;
+      }
+
+      .cell {
+        aspect-ratio: 1 / 1;
+        display: grid;
+        place-items: center;
+        border-radius: 6px;
+        background: #1d2232;
+        font-weight: 700;
+        font-size: 0.9rem;
+        color: #f4f6fb;
+        position: relative;
+      }
+
+      .cell.head {
+        background: #38bdf8;
+        color: #061018;
+        box-shadow: inset 0 0 0 2px rgba(15, 23, 42, 0.4);
+      }
+
+      .cell.body {
+        background: #a855f7;
+        color: #0b0b13;
+      }
+
+      .cell.blocked {
+        background: #374151;
+        color: #d1d5db;
+        font-size: 0.7rem;
+      }
+
+      .panel {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .card {
+        background: #141824;
+        border-radius: 16px;
+        padding: 16px;
+        border: 1px solid #20283b;
+      }
+
+      .card h2 {
+        margin-top: 0;
+        font-size: 1.1rem;
+      }
+
+      .pool {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+
+      .tile {
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        background: #232a3b;
+        display: grid;
+        place-items: center;
+        font-weight: 700;
+        cursor: pointer;
+        transition: transform 0.1s ease, background 0.2s ease;
+        border: 1px solid transparent;
+      }
+
+      .tile:hover {
+        transform: translateY(-2px);
+        background: #2d3650;
+      }
+
+      .tile.selected {
+        background: #22c55e;
+        color: #04140b;
+        border-color: rgba(15, 118, 58, 0.6);
+      }
+
+      .word-row {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        flex-wrap: wrap;
+      }
+
+      .word-display {
+        font-size: 1.4rem;
+        font-weight: 700;
+        letter-spacing: 0.2rem;
+      }
+
+      .status {
+        font-size: 0.9rem;
+        color: #94a3b8;
+      }
+
+      .controls {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 8px;
+      }
+
+      .controls button,
+      .actions button {
+        border: none;
+        border-radius: 10px;
+        padding: 10px 12px;
+        font-weight: 600;
+        background: #1f2633;
+        color: #e2e8f0;
+        cursor: pointer;
+      }
+
+      .controls button:hover,
+      .actions button:hover {
+        background: #2f3a52;
+      }
+
+      .controls button:disabled,
+      .actions button:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+      }
+
+      .actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      .legend {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        font-size: 0.85rem;
+        color: #cbd5f5;
+      }
+
+      .legend span {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+      }
+
+      .swatch {
+        width: 14px;
+        height: 14px;
+        border-radius: 4px;
+      }
+
+      .swatch.head {
+        background: #38bdf8;
+      }
+
+      .swatch.body {
+        background: #a855f7;
+      }
+
+      .swatch.blocked {
+        background: #374151;
+      }
+
+      @media (max-width: 900px) {
+        body {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <h1>WordSnake V1 Prototype</h1>
+      <span class="tag">15×15 Arena • Head-to-head survival</span>
+    </header>
+
+    <section class="arena">
+      <div class="grid" id="grid"></div>
+    </section>
+
+    <aside class="panel">
+      <section class="card">
+        <h2>Shared Letter Pool</h2>
+        <div class="pool" id="pool"></div>
+      </section>
+
+      <section class="card">
+        <h2>Current Word</h2>
+        <div class="word-row">
+          <div class="word-display" id="wordDisplay">—</div>
+          <div class="status" id="wordStatus">Tap letters to reserve. Minimum length 3.</div>
+        </div>
+        <div class="actions">
+          <button id="clearWord">Clear</button>
+          <button id="reserveWord">Lock Word</button>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>Move Direction</h2>
+        <div class="controls">
+          <button data-dir="up">⬆</button>
+          <button disabled></button>
+          <button data-dir="right">➡</button>
+          <button data-dir="left">⬅</button>
+          <button disabled></button>
+          <button data-dir="down">⬇</button>
+        </div>
+        <p class="status" id="moveStatus">
+          Swipe direction after locking a valid word. Blocked moves cancel without penalty.
+        </p>
+      </section>
+
+      <section class="card">
+        <h2>Legend</h2>
+        <div class="legend">
+          <span><span class="swatch head"></span> Head</span>
+          <span><span class="swatch body"></span> Letter body</span>
+          <span><span class="swatch blocked"></span> Neutral tile</span>
+        </div>
+      </section>
+    </aside>
+
+    <script>
+      const gridSize = 15;
+      const maxLength = 25;
+      const minWordLength = 3;
+      const poolSize = 12;
+      const gridEl = document.getElementById("grid");
+      const poolEl = document.getElementById("pool");
+      const wordDisplay = document.getElementById("wordDisplay");
+      const wordStatus = document.getElementById("wordStatus");
+      const moveStatus = document.getElementById("moveStatus");
+      const clearWordBtn = document.getElementById("clearWord");
+      const reserveWordBtn = document.getElementById("reserveWord");
+
+      const scrabbleBag =
+        "EEEEEEEEEEEEAAAAAAAAAIIIIIIIIIOOOOOOOONNNNNNRRRRRRTTTTTTL" +
+        "SSSSUUUUDDDDGGGBBCCMMPPFFHHVVWWYYKJXQZ";
+
+      const bag = scrabbleBag.split("");
+
+      const cells = [];
+      const occupied = new Map();
+      const neutralTiles = new Set();
+
+      let pool = [];
+      let reservedLetters = [];
+      let lockedWord = null;
+      let isCooldown = false;
+
+      const snake = {
+        head: { x: 7, y: 7 },
+        body: [],
+      };
+
+      const drawGrid = () => {
+        gridEl.innerHTML = "";
+        cells.length = 0;
+        for (let y = 0; y < gridSize; y += 1) {
+          for (let x = 0; x < gridSize; x += 1) {
+            const cell = document.createElement("div");
+            cell.className = "cell";
+            cell.dataset.x = x;
+            cell.dataset.y = y;
+            gridEl.appendChild(cell);
+            cells.push(cell);
+          }
+        }
+      };
+
+      const cellAt = (x, y) => cells[y * gridSize + x];
+
+      const placeNeutralTiles = () => {
+        [
+          { x: 5, y: 5 },
+          { x: 10, y: 6 },
+          { x: 3, y: 11 },
+        ].forEach((spot) => {
+          neutralTiles.add(`${spot.x},${spot.y}`);
+        });
+      };
+
+      const renderSnake = () => {
+        cells.forEach((cell) => {
+          cell.textContent = "";
+          cell.classList.remove("head", "body", "blocked");
+        });
+
+        neutralTiles.forEach((key) => {
+          const [x, y] = key.split(",").map(Number);
+          const cell = cellAt(x, y);
+          cell.classList.add("blocked");
+          cell.textContent = "BLOCK";
+        });
+
+        snake.body.forEach((segment) => {
+          const cell = cellAt(segment.x, segment.y);
+          cell.classList.add("body");
+          cell.textContent = segment.letter;
+        });
+
+        const headCell = cellAt(snake.head.x, snake.head.y);
+        headCell.classList.add("head");
+        headCell.textContent = "HEAD";
+      };
+
+      const refillPool = () => {
+        while (pool.length < poolSize && bag.length) {
+          const index = Math.floor(Math.random() * bag.length);
+          pool.push(bag.splice(index, 1)[0]);
+        }
+      };
+
+      const renderPool = () => {
+        poolEl.innerHTML = "";
+        pool.forEach((letter, index) => {
+          const tile = document.createElement("button");
+          tile.type = "button";
+          tile.className = "tile";
+          tile.textContent = letter;
+          if (reservedLetters.includes(index)) {
+            tile.classList.add("selected");
+          }
+          tile.addEventListener("click", () => toggleReserve(index));
+          poolEl.appendChild(tile);
+        });
+      };
+
+      const updateWordDisplay = () => {
+        const letters = reservedLetters.map((idx) => pool[idx]);
+        const word = letters.join("");
+        wordDisplay.textContent = word || "—";
+        const valid = word.length >= minWordLength;
+        wordStatus.textContent = valid
+          ? "Ready to lock word and move."
+          : `Minimum length ${minWordLength}.`;
+        reserveWordBtn.disabled = !valid || isCooldown;
+      };
+
+      const toggleReserve = (index) => {
+        if (lockedWord || isCooldown) {
+          return;
+        }
+        if (reservedLetters.includes(index)) {
+          reservedLetters = reservedLetters.filter((idx) => idx !== index);
+        } else {
+          reservedLetters.push(index);
+        }
+        renderPool();
+        updateWordDisplay();
+      };
+
+      const lockWord = () => {
+        if (lockedWord || isCooldown) {
+          return;
+        }
+        const letters = reservedLetters.map((idx) => pool[idx]);
+        lockedWord = letters.join("");
+        moveStatus.textContent = lockedWord
+          ? `Word locked: ${lockedWord}. Choose a direction.`
+          : "";
+      };
+
+      const clearWord = () => {
+        if (isCooldown) {
+          return;
+        }
+        lockedWord = null;
+        reservedLetters = [];
+        moveStatus.textContent =
+          "Swipe direction after locking a valid word. Blocked moves cancel without penalty.";
+        renderPool();
+        updateWordDisplay();
+      };
+
+      const clearUsedLetters = () => {
+        reservedLetters
+          .sort((a, b) => b - a)
+          .forEach((index) => {
+            pool.splice(index, 1);
+          });
+        reservedLetters = [];
+        refillPool();
+      };
+
+      const isCellBlocked = (x, y) => {
+        if (x < 0 || y < 0 || x >= gridSize || y >= gridSize) {
+          return true;
+        }
+        if (neutralTiles.has(`${x},${y}`)) {
+          return true;
+        }
+        return snake.body.some((segment) => segment.x === x && segment.y === y);
+      };
+
+      const attemptMove = (direction) => {
+        if (!lockedWord || isCooldown) {
+          return;
+        }
+        const delta = {
+          up: { x: 0, y: -1 },
+          down: { x: 0, y: 1 },
+          left: { x: -1, y: 0 },
+          right: { x: 1, y: 0 },
+        }[direction];
+
+        if (!delta) {
+          return;
+        }
+
+        const path = [];
+        let cursor = { ...snake.head };
+        for (const letter of lockedWord) {
+          cursor = { x: cursor.x + delta.x, y: cursor.y + delta.y };
+          if (isCellBlocked(cursor.x, cursor.y)) {
+            moveStatus.textContent = "Move blocked. Letters returned to pool.";
+            lockedWord = null;
+            clearWord();
+            return;
+          }
+          path.push({ x: cursor.x, y: cursor.y, letter });
+        }
+
+        snake.body.push(...path);
+        if (snake.body.length > maxLength) {
+          snake.body.splice(0, snake.body.length - maxLength);
+        }
+
+        snake.head = { ...cursor };
+        lockedWord = null;
+        clearUsedLetters();
+        renderPool();
+        updateWordDisplay();
+        renderSnake();
+
+        isCooldown = true;
+        reserveWordBtn.disabled = true;
+        setTimeout(() => {
+          isCooldown = false;
+          updateWordDisplay();
+        }, 500);
+      };
+
+      document.querySelectorAll("[data-dir]").forEach((button) => {
+        button.addEventListener("click", () => attemptMove(button.dataset.dir));
+      });
+
+      clearWordBtn.addEventListener("click", clearWord);
+      reserveWordBtn.addEventListener("click", lockWord);
+
+      drawGrid();
+      placeNeutralTiles();
+      refillPool();
+      renderPool();
+      updateWordDisplay();
+      renderSnake();
+    </script>
+  </body>
+</html>
